@@ -8,14 +8,13 @@ import java.awt.*;
 
 public class MainWindow {
 
-    static JFrame mainWindow;
-    static String serverAdress;
-    static int serverPort;
+    public static JFrame mainWindow;
+    public static JFrame connectionWindow;
+
 
     // Konstruktor pro inicializaci adresy serveru a portu
-    public MainWindow(String serverAdress, int serverPort) {
-        MainWindow.serverAdress = serverAdress;
-        MainWindow.serverPort = serverPort;
+    public MainWindow() {
+
     }
 
     // Vytvoření hlavního okna
@@ -74,17 +73,70 @@ public class MainWindow {
     // Akce pro multiplayer tlačítko
     private static void handleMultiplayerAction(JButton multiplayerButton) {
         multiplayerButton.addActionListener(e -> {
-            // Pokud je tlačítko stisknuto, vytvoří se objekt Multiplayer a připojí se k serveru
-            Multiplayer multiplayer = new Multiplayer(mainWindow, serverAdress, serverPort);
+            // Vytvoření dialogového okna
+            JFrame connectionWindow = new JFrame("Connect to Server");
+            connectionWindow.setSize(400, 200);
+            connectionWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+            connectionWindow.setLocationRelativeTo(null); // Centrování na obrazovce
 
-            if (multiplayer.getConnection().isConnected()) {  // Pokud je připojeno k serveru
-                mainWindow.setVisible(false);  // Skrytí hlavního okna
-                LoginWindow loginWindow = new LoginWindow(multiplayer);  // Vytvoření okna pro přihlášení
-                multiplayer.loginFrame = loginWindow.createLoginWindow();  // Vytvoření přihlašovacího okna
-                multiplayer.loginFrame.setVisible(true);  // Zobrazení přihlašovacího okna
-            }
+            // Panel s layoutem pro lepší zarovnání
+            JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+            mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Padding
+
+            // Grid panel pro vstupy
+            JPanel inputPanel = new JPanel(new GridLayout(2, 2, 10, 10));
+
+            // Labely a textová pole
+            JLabel serverAddressLabel = new JLabel("Server Address:");
+            JTextField serverAddressField = new JTextField("127.0.0.1");
+            JLabel portLabel = new JLabel("Port:");
+            JTextField portField = new JTextField("8080");
+
+            inputPanel.add(serverAddressLabel);
+            inputPanel.add(serverAddressField);
+            inputPanel.add(portLabel);
+            inputPanel.add(portField);
+
+            // Tlačítko panel
+            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+            JButton connectButton = new JButton("Connect");
+            connectButton.setPreferredSize(new Dimension(100, 30));
+            buttonPanel.add(connectButton);
+
+            // Přidání panelů do hlavního panelu
+            mainPanel.add(inputPanel, BorderLayout.CENTER);
+            mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+            connectionWindow.add(mainPanel);
+            connectionWindow.setVisible(true);
+
+            // Akce po stisknutí tlačítka "Connect"
+            connectButton.addActionListener(ev -> {
+                String serverAddress = serverAddressField.getText();
+                int port;
+
+                try {
+                    port = Integer.parseInt(portField.getText());
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(connectionWindow, "Invalid port number.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Vytvoření objektu Multiplayer s adresou a portem
+                Multiplayer multiplayer = new Multiplayer(mainWindow, serverAddress, port);
+                if (multiplayer.getConnection().isConnected()) {  // Pokud je připojeno k serveru
+                    connectionWindow.dispose();  // Zavření okna pro zadání připojení
+                    mainWindow.setVisible(false);  // Skrytí hlavního okna
+                    LoginWindow loginWindow = new LoginWindow(multiplayer);  // Vytvoření okna pro přihlášení
+                    multiplayer.loginFrame = loginWindow.createLoginWindow();  // Vytvoření přihlašovacího okna
+                    multiplayer.loginFrame.setVisible(true);  // Zobrazení přihlašovacího okna
+                } else {
+                    JOptionPane.showMessageDialog(connectionWindow, "Failed to connect to server.", "Connection Error", JOptionPane.ERROR_MESSAGE);
+                }
+            });
         });
     }
+
 
     // Vytvoření pozadí pro okno
     private static JLabel createBackgroundLabel() {
