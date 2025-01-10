@@ -30,9 +30,12 @@ public class Multiplayer {
     Client BlackPlayer;
 
     public Timer inactivityTimer;
+    public JLabel lobbyplayerLabel;
 
     // Indikátor, zda je zakázáno tahat
     public boolean DONT_MOVE = false;
+    public int playerCount = 0;
+
 
     // Různá okna aplikace
     public JFrame mainWindow;
@@ -54,10 +57,10 @@ public class Multiplayer {
         this.mainWindow = mainWindow;
         this.ServerAdress = ServerAdress;
         this.ServerPort = ServerPort;
-
+        lobbyplayerLabel = new JLabel("Players: "+playerCount+"/2", SwingConstants.RIGHT);
         // Inicializace hráčů
-        WhitePlayer = new Client("", true, true, null);
-        BlackPlayer = new Client("", false, true, null);
+        WhitePlayer = new Client("", true, true,0, null);
+        BlackPlayer = new Client("", false, true,0, null);
 
         // Inicializace připojení, pokud jsou k dispozici údaje
         if (!ServerAdress.isEmpty() && ServerPort != 0) {
@@ -71,7 +74,7 @@ public class Multiplayer {
     private void initializeConnection() {
         connection = new Connection(this, ServerAdress, ServerPort);
         connection.connect();
-        this.client = new Client("", false, false, null);
+        this.client = new Client("", false, false,0, null);
     }
 
     /**
@@ -225,4 +228,11 @@ public class Multiplayer {
 
         timer.start();
     }
+    public void updatePlayerCount(int newPlayerCount) {
+        playerCount = newPlayerCount; // Aktualizace počtu hráčů
+        lobbyplayerLabel.setText("Players: "+newPlayerCount + "/2"); // Nastavení nového textu
+        lobbyplayerLabel.revalidate(); // Přepočítání layoutu
+        lobbyplayerLabel.repaint(); // Překreslení labelu
+    }
+
 }

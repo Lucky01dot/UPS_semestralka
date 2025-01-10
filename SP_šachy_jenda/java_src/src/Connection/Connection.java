@@ -155,12 +155,15 @@ public class Connection {
                 String[] parts = message.split(";");
                 String name = null;
                 String role = null;
+                int LobbyID = 0;
 
                 for (String part : parts) {
                     if (part.startsWith("NAME:")) {
                         name = part.substring(5); // Odstraňuje "NAME:"
                     } else if (part.startsWith("ROLE:")) {
                         role = part.substring(5); // Odstraňuje "ROLE:"
+                    } else if (part.startsWith("LOBBY_ID:")) {
+                        LobbyID = Integer.parseInt(part.substring(9));
                     }
                 }
 
@@ -168,8 +171,15 @@ public class Connection {
                 if (name != null && role != null) {
                     multiplayer.getClient().setName(name);
                     multiplayer.getClient().setWhite(role.equals("WHITE"));
+                    if(role.equals("WHITE")){
+                        multiplayer.getWhitePlayer().setLobbyID(LobbyID);
+                    } else {
+                        multiplayer.getBlackPlayer().setLobbyID(LobbyID);
+                    }
+                    multiplayer.getClient().setLobbyID(LobbyID);
                     multiplayer.loginFrame.setVisible(false);
                     LobbyWindow lobbyWindow = new LobbyWindow(multiplayer);
+
                     multiplayer.LobbyFrame = lobbyWindow.createLobbyWindow();
                     multiplayer.LobbyFrame.setVisible(true);
                 } else {
@@ -252,7 +262,17 @@ public class Connection {
                 multiplayer.DONT_MOVE = false;
                 reconnectionFrame.setVisible(false);
                 reconnectionFrame.dispose();
-            }else {
+            } else if (message.startsWith("PLAYER_COUNT")) {
+                // Serverová zpráva ve formátu: UPDATE_PLAYER_COUNT;currentPlayerCount
+                String[] parts = message.split(";");
+                if (parts.length == 2) {
+                    multiplayer.playerCount = Integer.parseInt(parts[1]);
+                    multiplayer.updatePlayerCount(multiplayer.playerCount);
+
+                } else {
+                    System.err.println("Invalid UPDATE_PLAYER_COUNT message format: " + message);
+                }
+            } else {
                 System.err.println("Unrecognized server message: " + message);
             }
         } catch (Exception e) {

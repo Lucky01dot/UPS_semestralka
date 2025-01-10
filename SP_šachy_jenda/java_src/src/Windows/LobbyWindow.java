@@ -12,10 +12,14 @@ import java.awt.*;
 public class LobbyWindow {
     private final Multiplayer multiplayer;
 
+
     // Konstruktor pro inicializaci lobby okna s odkazem na multiplayer objekt
     public LobbyWindow(Multiplayer multiplayer) {
         this.multiplayer = multiplayer;
+
     }
+
+
 
     // --- Vytvoření lobby okna ---
     public JFrame createLobbyWindow() {
@@ -36,6 +40,25 @@ public class LobbyWindow {
             return null;  // Přerušení načítání lobby okna
         }
 
+        // --- Lišta s ID lobby a počtem hráčů ---
+        JPanel headerPanel = new JPanel();
+        headerPanel.setLayout(new BorderLayout());
+        headerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        multiplayer.LobbyFrame.add(headerPanel, BorderLayout.NORTH);
+
+        // Label pro ID lobby
+        JLabel lobbyIDLabel = new JLabel("Lobby ID: " + multiplayer.getClient().getLobbyID(), SwingConstants.LEFT);
+        lobbyIDLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerPanel.add(lobbyIDLabel, BorderLayout.WEST);
+
+        // Label pro ID lobby
+
+        multiplayer.lobbyplayerLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        headerPanel.add(multiplayer.lobbyplayerLabel, BorderLayout.EAST);
+
+
+
+
         // Vytvoření panelu pro hráče (info o hráči, stav atd.)
         JPanel playerPanel = createPlayerPanel();
         multiplayer.LobbyFrame.add(playerPanel, BorderLayout.CENTER);  // Přidání panelu do středu okna
@@ -51,16 +74,19 @@ public class LobbyWindow {
 
         // Akce při kliknutí na tlačítko Zpět
         backButton.addActionListener(e -> {
-            // Odeslání zprávy pro odhlášení
             multiplayer.getConnection().sendMessage(new Client_Logout());
-            multiplayer.LobbyFrame.setVisible(false);  // Skrytí lobby okna
-            multiplayer.LobbyFrame.dispose();  // Uvolnění prostředků spojených s oknem
-            multiplayer.loginFrame.setVisible(true);  // Zobrazení přihlašovací obrazovky
+            multiplayer.LobbyFrame.setVisible(false);
+            multiplayer.LobbyFrame.dispose();
+            multiplayer.loginFrame.setVisible(true);
         });
 
         multiplayer.LobbyFrame.setVisible(true);  // Zobrazení okna
         return multiplayer.LobbyFrame;  // Vrácení vytvořeného okna
     }
+
+
+
+
 
     // Metoda pro vytvoření panelu pro hráče (zobrazení informace o hráči)
     private JPanel createPlayerPanel() {

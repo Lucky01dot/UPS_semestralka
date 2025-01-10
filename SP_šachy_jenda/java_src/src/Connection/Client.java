@@ -7,14 +7,16 @@ public class Client {
     private String name;           // Jméno klienta
     private boolean isWhite;       // Určuje, zda je klient přiřazen jako bílý hráč
     private boolean ready;         // Stav připravenosti klienta (true = připraven, false = nepřipraven)
+    private int LobbyID;
     Game game;                     // Instance aktuální hry, do které je klient zapojen
 
     // --- Konstruktor ---
     // Inicializuje klienta se zadaným jménem, barvou, stavem připravenosti a hrou.
-    public Client(String name, boolean isWhite, boolean ready, Game game) {
+    public Client(String name, boolean isWhite, boolean ready,int LobbyID, Game game) {
         this.name = name;
         this.isWhite = isWhite;
         this.ready = ready;
+        this.LobbyID = LobbyID;
         this.game = game;
     }
 
@@ -64,5 +66,11 @@ public class Client {
     // Získává, zda je klient přiřazen jako bílý hráč
     public boolean isWhite() {
         return isWhite;
+    }
+    public int getLobbyID() {
+        return LobbyID;
+    }
+    public void setLobbyID(int lobbyID) {
+        LobbyID = lobbyID;
     }
 }
