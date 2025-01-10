@@ -139,6 +139,19 @@ bool add_player_to_lobby(lobby_manager *manager, client *new_client) {
                 printf("Debug: Player %s added to lobby %d as Black.\n", new_client->name, i + 1);
             }
 
+            int player_count = (l->whiteplayer != NULL) +
+                                    (l->blackplayer != NULL);
+            char update_message[128];
+            snprintf(update_message, sizeof(update_message),
+                        "PLAYER_COUNT;%d\n", player_count);
+            // Odeslání zprávy pouze existujícím hráčům
+            if (l->whiteplayer) {
+                send_message(l->whiteplayer->socket_ID, update_message);
+            }
+            if (l->blackplayer) {
+                send_message(l->blackplayer->socket_ID, update_message);
+            }
+
             // Nastavení stavu hráče a lobby
             new_client->is_ready = false;
             l->game_started = false;
@@ -408,7 +421,12 @@ int main(int argc, char *argv[]) {
     // Nastavení adresy serveru
     struct sockaddr_in server_addr = {0};
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(server_ip);
+    server_addr.sin_addr.s_addr = INADDR_ANY; // Naslouchání na všech adresách
+    if (inet_pton(AF_INET, server_ip, &server_addr.sin_addr) <= 0) {
+        perror("Invalid IP address");
+        close(server_socket);
+        exit(EXIT_FAILURE);
+    }
     server_addr.sin_port = htons(port);
 
     // Bindování serveru na zadanou IP adresu a port

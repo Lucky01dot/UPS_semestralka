@@ -112,6 +112,18 @@ void process_logout(int client_socket) {
             if (l->whiteplayer == NULL && l->blackplayer == NULL) {
                 l->game_started = false; // Pokud je lobby prázdné, hra nemůže pokračovat
             }
+             int player_count = (l->whiteplayer != NULL) +
+                                    (l->blackplayer != NULL);
+            char update_message[128];
+            snprintf(update_message, sizeof(update_message),
+                        "PLAYER_COUNT;%d\n", player_count);
+            // Odeslání zprávy pouze existujícím hráčům
+            if (l->whiteplayer) {
+                send_message(l->whiteplayer->socket_ID, update_message);
+            }
+            if (l->blackplayer) {
+                send_message(l->blackplayer->socket_ID, update_message);
+            }
 
             break; // Hráč nalezen a odstraněn, není třeba pokračovat
         }
@@ -244,8 +256,8 @@ void handle_game_end(lobby_manager *manager, game_manager *g_manager, char *buff
     }
 }
 
-void handle_login(char *buffer ,int client_socket){
-// Extrakce jména ze zprávy
+void handle_login(char *buffer, int client_socket) {
+    // Extrakce jména ze zprávy
     char *name_start = buffer + 6; // Přeskočíme "login;"
     char *name_end = strchr(name_start, ';'); // Najdeme konec jména (první výskyt ';')
     if (!name_end) {
@@ -253,6 +265,7 @@ void handle_login(char *buffer ,int client_socket){
         send_message(client_socket, "ERROR: Invalid login format.\n");
         close(client_socket);
         pthread_mutex_unlock(&client_mutex);
+        return;
     }
     *name_end = '\0'; // Nahradíme ';' nulovým znakem pro ukončení řetězce
 
@@ -268,11 +281,8 @@ void handle_login(char *buffer ,int client_socket){
     }
     for (int i = 0; i < g_manager->active_games; i++) {
         game *g = &g_manager->games[i];
-        if (g->white_player && strcmp(g->white_player->name, name_start) == 0) {
-            name_exists = true;
-            break;
-        }
-        if (g->black_player && strcmp(g->black_player->name, name_start) == 0) {
+        if ((g->white_player && strcmp(g->white_player->name, name_start) == 0) ||
+            (g->black_player && strcmp(g->black_player->name, name_start) == 0)) {
             name_exists = true;
             break;
         }
@@ -284,9 +294,11 @@ void handle_login(char *buffer ,int client_socket){
     } else {
         // Vytvoření klienta s extrahovaným jménem
         client *new_client = create_client(client_socket, name_start);
+        lobby *assigned_lobby = NULL;
         if (new_client) {
             // Přidání hráče do lobby
             bool added_to_lobby = false;
+            int lobby_id = -1;
             for (int i = 0; i < MAX_LOBBIES; i++) {
                 lobby *l = &manager->lobbies[i];
                 if (!l->game_started) { // Kontrolujeme pouze volné lobby
@@ -294,24 +306,45 @@ void handle_login(char *buffer ,int client_socket){
                         l->whiteplayer = new_client;
                         new_client->is_white = true;
                         added_to_lobby = true;
+                        assigned_lobby = l;
+                        lobby_id = i + 1;
                         break;
                     } else if (!l->blackplayer) {
                         l->blackplayer = new_client;
                         new_client->is_white = false;
                         added_to_lobby = true;
+                        assigned_lobby = l;
+                        lobby_id = i + 1;
                         break;
                     }
                 }
             }
+            if (assigned_lobby) {
+                int player_count = (assigned_lobby->whiteplayer != NULL) +
+                                    (assigned_lobby->blackplayer != NULL);
+                char update_message[128];
+                snprintf(update_message, sizeof(update_message),
+                            "PLAYER_COUNT;%d\n", player_count);
+                if(assigned_lobby->whiteplayer){
+                    send_message(assigned_lobby->whiteplayer->socket_ID,update_message);
+                }
+                if(assigned_lobby->blackplayer){
+                    send_message(assigned_lobby->blackplayer->socket_ID,update_message);
+                }
+            }
+
 
             if (added_to_lobby) {
-                // Sestavení a odeslání zprávy s informacemi o jménu a roli
+                // Sestavení a odeslání zprávy s informacemi o jménu, roli a ID lobby
                 char message[256];
                 snprintf(message, sizeof(message),
-                        "NAME:%s;ROLE:%s;READY:NO\n",
-                        new_client->name,
-                        new_client->is_white ? "WHITE" : "BLACK");
+                         "NAME:%s;ROLE:%s;READY:NO;LOBBY_ID:%d\n",
+                         new_client->name,
+                         new_client->is_white ? "WHITE" : "BLACK",
+                         lobby_id);
                 send_message(client_socket, message);
+
+
             } else {
                 printf("No available lobbies for the user '%s'.\n", name_start);
                 send_message(client_socket, "NO_AVAILABLE_LOBBIES\n");
@@ -322,6 +355,8 @@ void handle_login(char *buffer ,int client_socket){
         }
     }
 }
+
+
 void handle_ready(int client_socket){
     bool found_client = false;
 
