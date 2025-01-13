@@ -86,4 +86,9 @@ public class Game {
     public void setBlack(Client black) {
         this.black = black;
     }
+
+    public void setChessboard(Chessboard chessboard) {
+        this.chessboard = chessboard;
+    }
 }
+

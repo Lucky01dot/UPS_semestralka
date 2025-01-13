@@ -17,7 +17,8 @@ public enum Messages {
     // --- Zprávy od serveru ---
     SERVER_IS_CONNECTED("is_connected"), // Zpráva ověřující, zda je klient připojen k serveru
     SERVER_STOP_GAME("stop_game"),       // Zpráva oznamující ukončení hry serverem
-    SERVER_KEEP_ALIVE("keep_alive");     // Zpráva pro udržení aktivního spojení mezi klientem a serverem
+    SERVER_KEEP_ALIVE("keep_alive"),    // Zpráva pro udržení aktivního spojení mezi klientem a serverem
+    SERVER_INVALID_MOVE("invalid_move");
 
     // Privátní proměnná pro uchování textové reprezentace zprávy
     private final String name;

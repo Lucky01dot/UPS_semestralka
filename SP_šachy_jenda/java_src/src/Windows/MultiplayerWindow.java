@@ -37,24 +37,10 @@ public class MultiplayerWindow {
         multiplayer.inactivityTimer.setRepeats(false); // Jednorázové spuštění
         multiplayer.inactivityTimer.start();
 
-        // Přidání posluchače pro resetování časovače při uživatelské akci
-        multiplayer.GameFrame.addMouseListener(new java.awt.event.MouseAdapter() {
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                resetInactivityTimer();
-            }
-        });
-        multiplayer.GameFrame.addKeyListener(new java.awt.event.KeyAdapter() {
-            public void keyPressed(java.awt.event.KeyEvent e) {
-                resetInactivityTimer();
-            }
-        });
+
     }
 
-    private void resetInactivityTimer() {
-        if (multiplayer.inactivityTimer != null) {
-            multiplayer.inactivityTimer.restart();
-        }
-    }
+
 
     // --- Create Game Window ---
     public JFrame createGameWindow() {
@@ -168,6 +154,8 @@ public class MultiplayerWindow {
                 multiplayer.DONT_MOVE = false;
             } else {
                 JOptionPane.showMessageDialog(reconnectFrame, "Reconnect failed. Returning to main menu.");
+                reconnectFrame.setVisible(false);
+                reconnectFrame.dispose();
                 multiplayer.disconnect();
             }
         });

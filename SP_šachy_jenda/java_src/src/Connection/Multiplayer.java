@@ -234,5 +234,10 @@ public class Multiplayer {
         lobbyplayerLabel.revalidate(); // Přepočítání layoutu
         lobbyplayerLabel.repaint(); // Překreslení labelu
     }
+    public void resetInactivityTimer() {
+        if (inactivityTimer != null) {
+            inactivityTimer.restart();
+        }
+    }
 
 }

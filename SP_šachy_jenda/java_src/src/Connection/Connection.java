@@ -2,9 +2,11 @@ package Connection;
 
 import Message.Message;
 import Windows.LobbyWindow;
+import utils.Chessboard;
 import utils.Move;
 import utils.Piece;
 import Message.Server_Keep_Alive;
+import Message.Server_Invalid_Move;
 
 import javax.swing.*;
 import java.awt.*;
@@ -262,7 +264,29 @@ public class Connection {
                 multiplayer.DONT_MOVE = false;
                 reconnectionFrame.setVisible(false);
                 reconnectionFrame.dispose();
-            } else if (message.startsWith("PLAYER_COUNT")) {
+            } else if(message.equals("OPPONENT_TIMEOUT")){
+                multiplayer.DONT_MOVE = true;
+                String opponentName;
+                if(Objects.equals(multiplayer.getClient().getName(), multiplayer.getWhitePlayer().getName())){
+                    opponentName = multiplayer.getBlackPlayer().getName();
+                } else{
+                    opponentName = multiplayer.getWhitePlayer().getName();
+                }
+
+                reconnectionFrame = new JFrame("Game Stopped");
+                JLabel label = new JLabel("The game has been stopped. Waiting for a opponent " + opponentName + " .", SwingConstants.CENTER);
+                label.setFont(new Font("Arial", Font.PLAIN, 16));
+
+                reconnectionFrame.add(label);
+                reconnectionFrame.setSize(600, 200);
+                reconnectionFrame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+                reconnectionFrame.setLocationRelativeTo(null);
+                reconnectionFrame.setVisible(true);
+
+
+            }else if(message.startsWith("RESUME_GAME;")){
+                //nevím no , to už potřebuju otestovat
+            }else if (message.startsWith("PLAYER_COUNT")) {
                 // Serverová zpráva ve formátu: UPDATE_PLAYER_COUNT;currentPlayerCount
                 String[] parts = message.split(";");
                 if (parts.length == 2) {
@@ -304,10 +328,16 @@ public class Connection {
                         System.out.println(getPieceTypeLetter(movingPiece));
                         System.out.println(pieceType);
                         Move move = new Move(multiplayer.chessboard, movingPiece, newCol, newRow);
+                        if(multiplayer.chessboard.isValidMove(move)){
+                            multiplayer.chessboard.makeMove(move);
+                            multiplayer.chessboard.repaint();
+                        } else {
+                            System.err.println("Invalid move");
+                            sendMessage(new Server_Invalid_Move(move,multiplayer.chessboard.getGame()));
+                        }
 
 
-                        multiplayer.chessboard.makeMove(move);
-                        multiplayer.chessboard.repaint();
+
                     } else {
                         System.err.println("Invalid UPDATE: Piece mismatch or not found at position (" + oldCol + "," + oldRow + ")");
                     }
@@ -320,6 +350,10 @@ public class Connection {
             e.printStackTrace();
         }
     }
+
+
+
+
 
     /**
      * Vrátí typ figurky jako jedno písmeno (velké pro bílé, malé pro černé).
