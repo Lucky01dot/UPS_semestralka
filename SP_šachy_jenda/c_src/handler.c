@@ -535,27 +535,32 @@ void handle_move(char *buffer, int client_socket) {
         return;
     }
 
-    
-
     // Aktualizace herniho stavu (presun figurky na sachovnici)
     current_game->board[oldRow][oldCol] = ' ';
     current_game->board[newRow][newCol] = piece;
 
-    // Poslat aktualizaci vsem hracum ve hre
+    // Poslat aktualizaci jen soupeři
     char update[256];
     snprintf(update, sizeof(update), "UPDATE;%d;%s;%d;%d;%d;%d;%s\n",
              gameID, pieceType, oldCol, oldRow, newCol, newRow,
              capturedPieceType != NULL ? capturedPieceType : "none");
 
-    if (current_game->black_player && current_game->white_player) {
-        send_message(current_game->black_player->socket_ID, update);
-        send_message(current_game->white_player->socket_ID, update);
+    if (current_game->white_player && current_game->black_player) {
+        if (current_game->white_player->socket_ID == client_socket) {
+            // Pokud je na tahu bílý hráč, zprávu pošleme černému hráči
+            send_message(current_game->black_player->socket_ID, update);
+        } else if (current_game->black_player->socket_ID == client_socket) {
+            // Pokud je na tahu černý hráč, zprávu pošleme bílému hráči
+            send_message(current_game->white_player->socket_ID, update);
+        }
     }
 
     // Prepnuti tahu
     current_game->is_white_turn = !current_game->is_white_turn;
+
     pthread_mutex_unlock(&client_mutex);
 }
+
 void handle_invalid_move(char *buffer, int client_socket) {
     // Rozdělení zprávy podle separátoru (např. ";")
     char temp[256];
@@ -563,7 +568,7 @@ void handle_invalid_move(char *buffer, int client_socket) {
     char *token = strtok(temp, ";");
 
     // Validace typu zprávy
-    if (strcmp(token, "SERVER_INVALID_MOVE") != 0) {
+    if (strcmp(token, "invalid_move") != 0) {
         send_message(client_socket, "error;Invalid message type\n");
         return;
     }

@@ -9,7 +9,7 @@
 #define LOBBY_CAPACITY 2      // Maximální počet hráčů v jedné lobby
 #define MAX_CLIENTS (MAX_LOBBIES * LOBBY_CAPACITY) // Maximální počet klientů na serveru
 #define MAX_GAMES 5           // Maximální počet aktivních her
-#define KEEP_ALIVE_INTERVAL 30 // Interval v sekundách pro odesílání keep-alive zpráv
+#define KEEP_ALIVE_INTERVAL 20 // Interval v sekundách pro odesílání keep-alive zpráv
 
 // Struktura reprezentující klienta připojeného k serveru
 typedef struct client {

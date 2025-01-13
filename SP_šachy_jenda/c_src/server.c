@@ -14,7 +14,7 @@
 
 #define DEFAULT_SERVER_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT 12000
-#define RECONNECT_TIMEOUT 60 // Timeout pro opětovné připojení (v sekundách)
+#define RECONNECT_TIMEOUT 30 // Timeout pro opětovné připojení (v sekundách)
 
 // Global variables
 pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -23,7 +23,6 @@ lobby_manager *manager;
 game_manager *g_manager;
 int game_id_counter = 1; 
 
-/*
 void print_active_games(game_manager *g_manager) {
     if (!g_manager) {
         printf("Error: g_manager is NULL.\n");
@@ -71,6 +70,8 @@ void print_active_games(game_manager *g_manager) {
         printf("---------------\n");
     }
 }
+
+/*
 
 void print_lobbies(const lobby_manager *lm) {
     printf("Lobbies (%d):\n", lm->lobby_count);
@@ -364,6 +365,7 @@ void *client_handler(void *arg) {
 
             last_activity = time(NULL); // Aktualizace poslední aktivity
             if (strcmp(buffer, "keep_alive;") == 0) {
+                last_activity = time(NULL); // Aktualizace poslední aktivity
                 send_message(client_socket, "KEEP_ALIVE_OK\n");
                 continue;
             } else if (strncmp(buffer, "login;", 6) == 0) {
@@ -390,6 +392,7 @@ void *client_handler(void *arg) {
             
         }  else if (strncmp(buffer, "make_move;", 10) == 0) {
             handle_move(buffer,client_socket);
+            print_active_games(g_manager);
         } else if (strncmp(buffer, "game_end;", 9) == 0) {
             pthread_mutex_lock(&client_mutex);
             handle_game_end(manager,g_manager,buffer);
@@ -400,6 +403,7 @@ void *client_handler(void *arg) {
             handle_reconnect_game(buffer,client_socket);
         } else if(strncmp(buffer, "invalid_move;",13) == 0){
             handle_invalid_move(buffer,client_socket);
+            print_active_games(g_manager);
         } else {
             printf("Unknown command received: '%s'\n", buffer);
             send_message(client_socket, "Unknown command.\n");
@@ -408,72 +412,21 @@ void *client_handler(void *arg) {
         printf("Client disconnected on socket %d.\n", client_socket);
         break;
     } else {
-        if (errno == EWOULDBLOCK || errno == EAGAIN) {
+        time_t now = time(NULL);
+        if (now - last_activity > KEEP_ALIVE_INTERVAL * 2) { // Timeout překročen
+            printf("Client timeout on socket %d.\n", client_socket);
             client *current_client = get_client(client_socket);
-            time_t now = time(NULL);
-            if (now - last_activity > KEEP_ALIVE_INTERVAL * 2) {
-                printf("Client timeout on socket %d.\n", current_client->socket_ID);
-
-                // Vyhledání hry, ve které je klient účastníkem
-                game *current_game = find_game_by_client(g_manager, current_client);
-                if (!current_game) {
-                    printf("Client is not in any game.\n");
-                    cleanup_disconnected_client(current_client->socket_ID);
-                    break;
-                }
-
-                // Určení protihráče
-                client *opponent = (current_game->white_player == current_client) ? current_game->black_player : current_game->white_player;
-
-                // Oznámení druhému hráči o odpojení
-                if (opponent) {
-                    send_message(opponent->socket_ID,"OPPONENT_TIMEOUT\n");
-                }
-
-                // Čekání na možné opětovné připojení
-                time_t disconnect_time = time(NULL);
-                int reconnected = 0;
-                while (time(NULL) - disconnect_time < RECONNECT_TIMEOUT) {
-                    int new_socket = accept(server_socket, NULL, NULL);
-                    if (new_socket > 0) {
-                        printf("Client reconnected on socket %d.\n", new_socket);
-
-                        // Aktualizace stavu klienta
-                        current_client->socket_ID = new_socket;
-                        
-                        char serialized_board[65]; // 64 políček + 1 pro nulový znak
-                        serialize_board(current_game->board,serialized_board);
-
-                        // Sestavení zprávy
-                        char message[100];
-                        snprintf(message, sizeof(message), "RESUME_GAME;%s;\n", serialized_board);
-                        
-                        // Oznámení klientovi o obnovení hry
-                        send_message(new_socket,message);
-
-                        reconnected = 1;
-                        break;
-                    }
-
-                    usleep(100000); // Sleep na 100 ms pro snížení zatížení CPU
-                }
-
-                if (!reconnected) {
-                    printf("Reconnect timeout for client on socket %d.\n", current_client->socket_ID);
-
-                    // Oznámení druhému hráči o ukončení hry
-                    if (opponent) {
-                        send_message(opponent->socket_ID,"OPPONENT_DISCONNECT_GAME\n");
-                    }
-
-                    
-                    cleanup_disconnected_client(current_client->socket_ID);
-                    break;
-                }
-            }
-        } else {
-            perror("recv");
+            printf("Name is %s\n", current_client->name);
+            
+            pthread_mutex_lock(&client_mutex);
             cleanup_disconnected_client(client_socket);
+            pthread_mutex_unlock(&client_mutex);
+            break;
+        } else if (errno != EWOULDBLOCK && errno != EAGAIN) {
+            perror("recv");
+            pthread_mutex_lock(&client_mutex);
+            cleanup_disconnected_client(client_socket);
+            pthread_mutex_unlock(&client_mutex);
             break;
         }
 
