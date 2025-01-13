@@ -89,5 +89,5 @@ void handle_unready(int client_socket);              // Zrušení označení hr�
 void handle_move(char *buffer, int client_socket);   // Zpracování tahu hráče
 void handle_stop_game(char *buffer, int client_socket); // Ukončení hry
 void handle_reconnect_game(char *buffer, int client_socket); // Opětovné připojení hráče ke hře
-
+void handle_invalid_move(char *buffer, int client_socket);
 #endif // SERVER_H

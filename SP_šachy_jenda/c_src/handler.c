@@ -459,29 +459,41 @@ void handle_unready(int client_socket){
     send_message(client_socket, "ERROR: Client not found.\n");
     }
 }
-void handle_move(char *buffer,int client_socket){
-    // Rozdělení zprávy podle středníků
+void handle_move(char *buffer, int client_socket) {
+    // Rozdeleni zpravy podle stredniku
     char temp[256];
-    strcpy(temp, buffer); // Zkopírujeme zprávu, aby nebyla modifikována
+    strcpy(temp, buffer); // Zkopirujeme zpravu, aby nebyla modifikovana
     char *token = strtok(temp, ";");
 
     if (strcmp(token, "make_move") != 0) {
         send_message(client_socket, "error;Invalid message format\n");
-        
+        return;
     }
 
-    // Získání parametrů tahu
-    int gameID = atoi(strtok(NULL, ";"));
+    // Ziskani parametru tahu
+    char *gameID_str = strtok(NULL, ";");
     char *pieceType = strtok(NULL, ";");
-    int oldCol = atoi(strtok(NULL, ";"));
-    int oldRow = atoi(strtok(NULL, ";"));
-    int newCol = atoi(strtok(NULL, ";"));
-    int newRow = atoi(strtok(NULL, ";"));
+    char *oldCol_str = strtok(NULL, ";");
+    char *oldRow_str = strtok(NULL, ";");
+    char *newCol_str = strtok(NULL, ";");
+    char *newRow_str = strtok(NULL, ";");
     char *capturedPieceType = strtok(NULL, ";");
+
+    if (!gameID_str || !pieceType || !oldCol_str || !oldRow_str || 
+        !newCol_str || !newRow_str) {
+        send_message(client_socket, "error;Incomplete message\n");
+        return;
+    }
+
+    int gameID = atoi(gameID_str);
+    int oldCol = atoi(oldCol_str);
+    int oldRow = atoi(oldRow_str);
+    int newCol = atoi(newCol_str);
+    int newRow = atoi(newRow_str);
 
     pthread_mutex_lock(&client_mutex);
 
-    // Vyhledání hry podle GameID
+    // Vyhledani hry podle GameID
     game *current_game = NULL;
     for (int i = 0; i < g_manager->active_games; i++) {
         if (g_manager->games[i].id == gameID) {
@@ -493,7 +505,7 @@ void handle_move(char *buffer,int client_socket){
     if (current_game == NULL) {
         send_message(client_socket, "error;Game not found\n");
         pthread_mutex_unlock(&client_mutex);
-        
+        return;
     }
 
     // Validace tahu
@@ -501,56 +513,100 @@ void handle_move(char *buffer,int client_socket){
         newCol < 0 || newCol >= 8 || newRow < 0 || newRow >= 8) {
         send_message(client_socket, "error;Invalid move\n");
         pthread_mutex_unlock(&client_mutex);
-        
+        return;
     }
 
-    // Kontrola, zda na dané pozici je správná figurka
+    // Kontrola, zda na dane pozici je spravna figurka
     char piece = current_game->board[oldRow][oldCol];
-    
+    if (piece == ' ') {
+        send_message(client_socket, "error;No piece at the source position\n");
+        pthread_mutex_unlock(&client_mutex);
+        return;
+    }
 
-    // Rozpoznání typu figurky
-    bool is_white_piece = isupper(piece); // Bílé figury jsou velká písmena
-    bool is_black_piece = islower(piece); // Černé figury jsou malá písmena
+    // Rozpoznani typu figurky
+    bool is_white_piece = isupper(piece); // Bile figury jsou velka pismena
+    bool is_black_piece = islower(piece); // Cerne figury jsou mala pismena
 
     if ((current_game->is_white_turn && !is_white_piece) ||
         (!current_game->is_white_turn && !is_black_piece)) {
         send_message(client_socket, "error;Invalid piece for the current player\n");
         pthread_mutex_unlock(&client_mutex);
-        
+        return;
     }
 
     
 
-    // Aktualizace herního stavu (přesun figurky na šachovnici)
+    // Aktualizace herniho stavu (presun figurky na sachovnici)
     current_game->board[oldRow][oldCol] = ' ';
     current_game->board[newRow][newCol] = piece;
 
-    // Výpis aktuální šachovnice po tahu
-    printf("Game ID: %d - Board after move:\n", gameID);
-    
-
-
-                // Poslat aktualizaci všem hráčům ve hře
+    // Poslat aktualizaci vsem hracum ve hre
     char update[256];
     snprintf(update, sizeof(update), "UPDATE;%d;%s;%d;%d;%d;%d;%s\n",
-            gameID, pieceType, oldCol, oldRow, newCol, newRow,
-            capturedPieceType != NULL ? capturedPieceType : "none");
+             gameID, pieceType, oldCol, oldRow, newCol, newRow,
+             capturedPieceType != NULL ? capturedPieceType : "none");
 
-    if (current_game->is_white_turn && current_game->black_player) {
-        // Pokud je nyní na tahu bílý, pošleme aktualizaci černému hráči
+    if (current_game->black_player && current_game->white_player) {
         send_message(current_game->black_player->socket_ID, update);
-    } else if (!current_game->is_white_turn && current_game->white_player) {
-        // Pokud je nyní na tahu černý, pošleme aktualizaci bílému hráči
         send_message(current_game->white_player->socket_ID, update);
     }
 
-
-    // Přepnutí tahu
+    // Prepnuti tahu
     current_game->is_white_turn = !current_game->is_white_turn;
     pthread_mutex_unlock(&client_mutex);
-
-
 }
+void handle_invalid_move(char *buffer, int client_socket) {
+    // Rozdělení zprávy podle separátoru (např. ";")
+    char temp[256];
+    strcpy(temp, buffer);
+    char *token = strtok(temp, ";");
+
+    // Validace typu zprávy
+    if (strcmp(token, "SERVER_INVALID_MOVE") != 0) {
+        send_message(client_socket, "error;Invalid message type\n");
+        return;
+    }
+
+    // Získání parametrů ze zprávy
+    int gameID = atoi(strtok(NULL, ";"));
+    int newCol = atoi(strtok(NULL, ";"));
+    int newRow = atoi(strtok(NULL, ";"));
+    int oldCol = atoi(strtok(NULL, ";"));
+    int oldRow = atoi(strtok(NULL, ";"));
+    char *piece = strtok(NULL, ";");
+    char *capture = strtok(NULL, ";");
+
+    // Synchronizace pomocí mutexu
+    pthread_mutex_lock(&client_mutex);
+
+    // Vyhledání hry podle gameID
+    game *current_game = NULL;
+    for (int i = 0; i < g_manager->active_games; i++) {
+        if (g_manager->games[i].id == gameID) {
+            current_game = &g_manager->games[i];
+            break;
+        }
+    }
+
+    if (current_game == NULL) {
+        pthread_mutex_unlock(&client_mutex);
+        send_message(client_socket, "error;Game not found\n");
+        return;
+    }
+
+
+    // Vrácení tahu na šachovnici
+    current_game->board[oldRow][oldCol] = (piece && strcmp(piece, "none") != 0) ? piece[0] : ' ';
+    current_game->board[newRow][newCol] = (capture && strcmp(capture, "none") != 0) ? capture[0] : ' ';
+
+    
+
+    // Uvolnění mutexu
+    pthread_mutex_unlock(&client_mutex);
+}
+
+
 void handle_stop_game(char *buffer,int client_socket){
     pthread_mutex_lock(&client_mutex);
 
