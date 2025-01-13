@@ -191,7 +191,7 @@ public class Chessboard extends JPanel {
                 gameState = isWhiteToMove() ? GameState.BLACK_WINS : GameState.WHITE_WINS;
                 isGameOver = true;
                 if(multiplayer != null) {
-                    multiplayer.inactivityTimer.stop();
+
                     String winner = isWhiteToMove() ? game.getBlack().getName() : game.getWhite().getName();
                     // Zobrazení dialogového okna
                     JOptionPane.showMessageDialog(this, "Hráč " + winner + " vyhrál!", "Konec hry", JOptionPane.INFORMATION_MESSAGE);
@@ -258,7 +258,7 @@ public class Chessboard extends JPanel {
         int yOffset = (panelHeight - (ROW * BOXSIZE)) / 2;
 
         Piece king = findKind(isWhiteToMove());
-        boolean isKingInCheck = king != null && checkScanner.isKingChecked(new Move(this, king, king.col, king.row));
+        boolean isKingInCheck = selectedPiece == king && king != null && checkScanner.isKingChecked(new Move(this, king, king.col, king.row));
         boolean isKingInCheckmate = isGameOver && isKingInCheck;
         // Kreslíme šachovnici s odsazením
         for (int x = 0; x < ROW; x++) {

@@ -18,27 +18,14 @@ public class MultiplayerWindow {
     Game game;
 
 
-    private static final int INACTIVITY_LIMIT = 5 * 60 * 1000;
+
 
     public MultiplayerWindow(Multiplayer multiplayer, int gameID) {
         this.multiplayer = multiplayer;
         this.gameID = gameID;
     }
 
-    private void startInactivityTimer() {
-        multiplayer.inactivityTimer = new Timer(INACTIVITY_LIMIT, e -> {
-            JOptionPane.showMessageDialog(multiplayer.GameFrame,
-                    "You have been inactive for too long. Reconnecting...",
-                    "Inactivity Warning",
-                    JOptionPane.WARNING_MESSAGE);
-            createReconnectWindow();
-        });
 
-        multiplayer.inactivityTimer.setRepeats(false); // Jednorázové spuštění
-        multiplayer.inactivityTimer.start();
-
-
-    }
 
 
 
@@ -111,7 +98,7 @@ public class MultiplayerWindow {
         // Nastavení viditelnosti
         multiplayer.GameFrame.setVisible(true);
 
-        startInactivityTimer();
+
 
         return multiplayer.GameFrame;
     }

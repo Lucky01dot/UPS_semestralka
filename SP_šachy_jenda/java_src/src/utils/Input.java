@@ -21,7 +21,7 @@ public class Input extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
         if (multiplayer != null) {
-            multiplayer.resetInactivityTimer();
+
             // Kontrola, zda je hra pozastavena (např. čekání na tah)
             if (multiplayer.DONT_MOVE) {
                 System.out.println("You cant play the game now.");
