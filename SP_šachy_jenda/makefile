@@ -7,7 +7,7 @@ JAR_FILE = chess_app.jar
 
 # Compiler and flags
 CC = gcc
-CFLAGS = -Wall -Wextra -O2
+CFLAGS = -Wall -Wextra -O2 -m64
 JAVAC = javac
 JAR = jar
 
